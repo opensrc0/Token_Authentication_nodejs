@@ -1,0 +1,106 @@
+<html>
+   <body>
+    <link rel="stylesheet" href="//netdna.bootstrapcdn.com/bootstrap/3.0.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="//netdna.bootstrapcdn.com/font-awesome/4.0.3/css/font-awesome.min.css">
+
+    <link rel="stylesheet" href="./../css/auto-complete.css">
+<script src="https://code.jquery.com/jquery-3.2.1.min.js" integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4=" crossorigin="anonymous"></script>
+    <script src="./../js/auto-complete.min.js"></script>
+
+
+    <style>
+        body        { padding-top:80px; }
+        .tt-selectable {
+          padding : 5px;
+        }
+        .tt-menu {    background-color: bisque;
+    width: 100%;
+    cursor: pointer;
+    padding: 10px;}
+    </style>
+
+      <div class="container">
+          <div class="col-sm-6 col-sm-offset-3">
+              <h1><span class="fa fa-dashboard"></span> Welcome to Dashboard</h1>
+              <form action="/sign-in" method="post">
+                  <div class="form-group" id="the-basics">
+                      <label class="fa fa-location-arrow">Enter Location*</label>
+                      <input type="text" class="form-control typeahead" name="userId" required="true">
+                  </div>
+
+              </form>
+
+              <hr>
+
+              <p><a href="/api/location">Click here to get locations searched by user.</a></p>
+
+              <p>Logout Here <a href="/sign-out">logout</a>.</p>
+
+          </div>
+
+      </div>
+      <script src="http://maps.googleapis.com/maps/api/js?libraries=places&key=AIzaSyAsAf65IXO9rsDKz3L9sNhOtDJoJ8jkBE8"
+    async defer></script>
+      <script>
+      var substringMatcher = function(strs) {
+        return function findMatches(searchword, cb, cb2) {
+          var params = {
+            componentRestrictions: {country: 'in'},
+            input: searchword,
+            offset: 1
+          };
+
+          var service = new google.maps.places.AutocompleteService();
+          service.getPlacePredictions( params ,function(predictions, status) {
+              var matches = [];
+              searchword = searchword.toLowerCase();
+                for (i=0; i<predictions.length; i++) {
+                  if (~predictions[i].description.toLowerCase().indexOf(searchword))
+                    matches.push(predictions[i].description);
+                }
+
+                cb2($.map(predictions, function (value, key) {
+      						return {
+      							label: value.description,
+      							value: value.description,
+                    geocodeLocation: value.structured_formatting.main_text,
+      							key: key
+      						}
+      					}));
+          });
+          cb(['']);
+        };
+      };
+
+      $('#the-basics .typeahead').typeahead({
+        hint: true,
+        highlight: true,
+        minLength: 1
+      },
+      {
+        name: 'states',
+        display: 'label',
+        source: substringMatcher()
+      }).bind('typeahead:select', function (ev, suggestion) {
+        console.log(suggestion);
+        new google.maps.Geocoder().geocode( { 'address': suggestion.value}, function(results, status) {
+            console.log(results);
+            if(status == google.maps.GeocoderStatus.OK) {
+              $.ajax({
+                  url : '/api/location',
+                  method : "POST",
+                  data : {
+                    lat : results[0].geometry.location.lat(),
+                    long : results[0].geometry.location.lng(),
+                    location : suggestion.geocodeLocation,
+                    fullAddress : suggestion.label,
+                    admin: true
+                  }
+
+              });
+            }
+        });
+    	});
+      </script>
+   </body>
+</html>
